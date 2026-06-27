@@ -14,6 +14,6 @@ export function applyFogEffects(player, location, radius) {
 
   if (!nearFog) return;
 
-  player.runCommandAsync("effect @s blindness 2 1 true");
-  player.runCommandAsync("effect @s darkness 2 0 true");
+  player.runCommand("effect @s blindness 2 1 true");
+  player.runCommand("effect @s darkness 2 0 true");
 }
