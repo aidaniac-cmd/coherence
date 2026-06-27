@@ -1,0 +1,1 @@
+{"format_version":"1.16.100","minecraft:fog_settings":{"description":{"identifier":"coherence:yellow_fog"},"distance":{"air":{"fog_start":0.1,"fog_end":0.8,"fog_color":"#F4D83A","render_distance_type":"render"}}}}

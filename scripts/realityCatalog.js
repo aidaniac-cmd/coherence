@@ -38,6 +38,27 @@ const STAIRS = [
 
 const GLASS_PANES = ["glass", "white_stained_glass", "orange_stained_glass", "magenta_stained_glass", "light_blue_stained_glass", "yellow_stained_glass", "lime_stained_glass", "pink_stained_glass", "gray_stained_glass", "light_gray_stained_glass", "cyan_stained_glass", "purple_stained_glass", "blue_stained_glass", "brown_stained_glass", "green_stained_glass", "red_stained_glass", "black_stained_glass"].map((glass) => [glass === "glass" ? "glass_pane" : `${glass}_pane`, glass]);
 
+export const WOOL_PALETTE = ["white_wool", "orange_wool", "magenta_wool", "light_blue_wool", "yellow_wool", "lime_wool", "pink_wool", "gray_wool", "light_gray_wool", "cyan_wool", "purple_wool", "blue_wool", "brown_wool", "green_wool", "red_wool", "black_wool"];
+export const RANDOM_BLOCK_PALETTE = ["stone", "dirt", "oak_planks", "bricks", "glass", "obsidian", "slime", "honey_block", "amethyst_block", "prismarine", "purpur_block", "magma", "packed_ice", "sponge", "redstone_block", "emerald_block"];
+export const LIGHT_PALETTE = ["glowstone", "sea_lantern", "shroomlight", "ochre_froglight", "verdant_froglight", "pearlescent_froglight", "redstone_lamp", "jack_o_lantern"];
+export const PRIDE_PALETTE = ["red_wool", "orange_wool", "yellow_wool", "lime_wool", "light_blue_wool", "purple_wool", "pink_wool", "white_wool", "cyan_wool", "brown_wool", "black_wool"];
+
+const chunks = (...pairs) => pairs.map(([x, z]) => ({ minX: x, maxX: x + 15, minZ: z, maxZ: z + 15 }));
+const FIVE_VOIDS = chunks([-32, -32], [0, -32], [32, -32], [-16, 16], [32, 16]);
+const CHECKER_VOIDS = [];
+const BORDER_VOIDS = [];
+for (let x = -64; x < 64; x += 16) {
+  for (let z = -64; z < 64; z += 16) {
+    if ((((x + 64) / 16) + ((z + 64) / 16)) % 2 === 0) CHECKER_VOIDS.push(...chunks([x, z]));
+    const edge = x === -64 || x === 48 || z === -64 || z === 48;
+    const gateway = ((x === -64 || x === 48) && (z === -16 || z === 0)) ||
+      ((z === -64 || z === 48) && (x === -16 || x === 0));
+    if (edge && !gateway) BORDER_VOIDS.push(...chunks([x, z]));
+  }
+}
+
+const INVERTED_BLOCKS = [["blue_wool", "orange_wool"], ["orange_wool", "blue_wool"], ["red_wool", "cyan_wool"], ["cyan_wool", "red_wool"], ["yellow_wool", "purple_wool"], ["purple_wool", "yellow_wool"], ["black_wool", "white_wool"], ["white_wool", "black_wool"], ["dark_oak_log", "pale_oak_log"], ["dark_oak_planks", "pale_oak_planks"], ["stone", "quartz_block"], ["deepslate", "calcite"], ["dirt", "snow"], ["grass_block", "pink_wool"], ["water", "lava"], ["lava", "water"]];
+
 export const REALITY_RECIPES = new Map([
   [0, { name: "Original" }],
   [1, { name: "Perfect copy" }],
@@ -79,67 +100,67 @@ export const REALITY_RECIPES = new Map([
   [37, { name: "No cobwebs", replacements: remove("web") }],
   [38, { name: "Nether bricks", replacements: swap("bricks", "nether_bricks") }],
   [39, { name: "Fired clay", replacements: swap("clay", "terracotta") }],
-  [40, { name: "Charred terracotta", replacements: swap("terracotta", "black_terracotta") }],
-  [41, { name: "Gray concrete", replacements: swap("white_concrete", "gray_concrete") }],
-  [42, { name: "False redstone", replacements: swap("redstone_ore", "gold_ore") }],
-  [43, { name: "Deep coal", replacements: swap("coal_ore", "deepslate_coal_ore") }],
-  [44, { name: "Copper iron", replacements: swap("iron_ore", "copper_ore") }],
-  [45, { name: "Gilded gold", replacements: swap("gold_ore", "diamond_ore") }],
-  [46, { name: "Sandy gravel", replacements: swap("gravel", "sand") }],
-  [47, { name: "Frozen water", replacements: swap("water", "ice") }],
-  [48, { name: "Cold lava", replacements: swap("lava", "obsidian") }],
-  [49, { name: "Soul nether", replacements: swap("netherrack", "soul_sand") }],
-  [50, { name: "Magma souls", replacements: swap("soul_sand", "magma") }],
-  [51, { name: "Purpur end", replacements: swap("end_stone", "purpur_block") }],
-  [52, { name: "Crying obsidian", replacements: swap("obsidian", "crying_obsidian") }],
-  [53, { name: "Melon pumpkins", replacements: swap("pumpkin", "melon_block") }],
-  [54, { name: "Furnace tables", replacements: swap("crafting_table", "furnace") }],
-  [55, { name: "Blast furnaces", replacements: swap("furnace", "blast_furnace") }],
-  [56, { name: "No cauldrons", replacements: remove("cauldron") }],
-  [57, { name: "Powered rails", replacements: swap("rail", "golden_rail") }],
-  [58, { name: "Broken circuits", replacements: remove("redstone_wire") }],
-  [59, { name: "Missing levers", replacements: remove("lever") }],
-  [60, { name: "Stone pressure", replacements: swap("oak_pressure_plate", "stone_pressure_plate") }],
-  [61, { name: "Unwritten", replacements: remove("standing_sign", "wall_sign", "oak_hanging_sign") }],
-  [62, { name: "No banners", replacements: remove("standing_banner", "wall_banner") }],
-  [63, { name: "Bedless", replacements: remove("bed") }],
-  [64, { name: "No candles", replacements: remove("candle", "white_candle", "orange_candle", "magenta_candle", "light_blue_candle", "yellow_candle", "lime_candle", "pink_candle", "gray_candle", "light_gray_candle", "cyan_candle", "purple_candle", "blue_candle", "brown_candle", "green_candle", "red_candle", "black_candle") }],
-  [65, { name: "Soul fires", replacements: swap("campfire", "soul_campfire") }],
-  [66, { name: "Soul lanterns", replacements: swap("lantern", "soul_lantern") }],
-  [67, { name: "Fungal glow", replacements: swap("glowstone", "shroomlight") }],
-  [68, { name: "Prismarine lamps", replacements: swap("sea_lantern", "prismarine") }],
-  [69, { name: "Mossy cobble", replacements: swap("cobblestone", "mossy_cobblestone") }],
-  [70, { name: "No vines", replacements: remove("vine", "cave_vines", "cave_vines_body_with_berries", "cave_vines_head_with_berries") }],
-  [71, { name: "Bamboo cactus", replacements: swap("cactus", "bamboo") }],
-  [72, { name: "No sugar cane", replacements: remove("reeds") }],
-  [73, { name: "Empty ponds", replacements: remove("waterlily") }],
-  [74, { name: "Muddy farms", replacements: swap("farmland", "mud") }],
-  [75, { name: "Podzol paths", replacements: swap("grass_path", "podzol") }],
-  [76, { name: "Clay mud", replacements: swap("mud", "clay") }],
-  [77, { name: "Calcite dripstone", replacements: swap("dripstone_block", "calcite") }],
-  [78, { name: "Basalt tuff", replacements: swap("tuff", "basalt") }],
-  [79, { name: "Diorite granite", replacements: swap("granite", "diorite") }],
-  [80, { name: "Andesite diorite", replacements: swap("diorite", "andesite") }],
-  [81, { name: "Granite andesite", replacements: swap("andesite", "granite") }],
-  [82, { name: "Red sandstone", replacements: swap("sandstone", "red_sandstone") }],
-  [83, { name: "Bone quartz", replacements: swap("quartz_block", "bone_block") }],
-  [84, { name: "Copper iron", replacements: swap("iron_block", "copper_block") }],
-  [85, { name: "Emerald gold", replacements: swap("gold_block", "emerald_block") }],
-  [86, { name: "Lapis diamond", replacements: swap("diamond_block", "lapis_block") }],
-  [87, { name: "Redstone emerald", replacements: swap("emerald_block", "redstone_block") }],
-  [88, { name: "Hay targets", replacements: swap("target", "hay_block") }],
-  [89, { name: "Slime honey", replacements: swap("honey_block", "slime") }],
-  [90, { name: "Honey slime", replacements: swap("slime", "honey_block") }],
-  [91, { name: "Soaked sponge", replacements: swap("sponge", "wet_sponge") }],
-  [92, { name: "Dead coral", replacements: [["tube_coral_block", "dead_tube_coral_block"], ["brain_coral_block", "dead_brain_coral_block"], ["bubble_coral_block", "dead_bubble_coral_block"], ["fire_coral_block", "dead_fire_coral_block"], ["horn_coral_block", "dead_horn_coral_block"]] }],
-  [93, { name: "Red glass", replacements: swap("glass", "red_stained_glass") }],
-  [94, { name: "No trapdoors", replacements: remove("trapdoor", "spruce_trapdoor", "birch_trapdoor", "jungle_trapdoor", "acacia_trapdoor", "dark_oak_trapdoor", "mangrove_trapdoor", "cherry_trapdoor", "bamboo_trapdoor", "iron_trapdoor") }],
-  [95, { name: "Fences become walls", replacements: [["oak_fence", "stone_brick_wall"], ["spruce_fence", "stone_brick_wall"], ["birch_fence", "stone_brick_wall"], ["jungle_fence", "stone_brick_wall"], ["acacia_fence", "stone_brick_wall"], ["dark_oak_fence", "stone_brick_wall"]] }],
-  [96, { name: "End rod chains", replacements: swap("chain", "end_rod") }],
-  [97, { name: "No scaffolding", replacements: remove("scaffolding") }],
-  [98, { name: "Abandoned apiaries", replacements: remove("beehive", "bee_nest") }],
-  [99, { name: "No storage", replacements: remove("chest", "trapped_chest", "barrel", "ender_chest") }],
-  [100, { name: "Blackstone everything", scan: { type: "solidify", block: "blackstone" } }]
+  [40, { name: "Five holes", voidChunks: FIVE_VOIDS }],
+  [41, { name: "Golden strata", scan: { type: "gold_layers" }, fog: "coherence:golden_fog" }],
+  [42, { name: "Slime lawn", replacements: swap("grass_block", "slime"), fog: "coherence:green_fog" }],
+  [43, { name: "Charged creepers", mobPolicy: "charged_creepers" }],
+  [44, { name: "Impossible suburb", feature: "houses" }],
+  [45, { name: "Loot fever", feature: "loot_chests" }],
+  [46, { name: "Checker void", voidChunks: CHECKER_VOIDS }],
+  [47, { name: "Zombie tools", mobPolicy: "zombies" }],
+  [48, { name: "False End", replacements: [["grass_block", "end_stone"], ["dirt", "end_stone"], ["stone", "end_stone"], ["water", "air"], ["oak_log", "obsidian"]], feature: "end_spires", mobPolicy: "end", fog: "coherence:end_fog" }],
+  [49, { name: "TNT weather", tntRain: true, fog: "coherence:storm_fog" }],
+  [50, { name: "Overpowered hostiles", mobPolicy: "armored_hostiles" }],
+  [51, { name: "Wool static", scan: { type: "palette", palette: WOOL_PALETTE } }],
+  [52, { name: "Pyramid field", feature: "pyramids" }],
+  [53, { name: "Chunk marbles", scan: { type: "chunk_spheres" }, arrival: { x: 7, y: 99, z: 7 } }],
+  [54, { name: "Sky mineshaft", feature: "sky_mineshaft", fog: "coherence:black_fog" }],
+  [55, { name: "Black fog", fog: "coherence:black_fog" }],
+  [56, { name: "Wrong audio", distortedSound: true }],
+  [57, { name: "Cardboard world", scan: { type: "palette", palette: ["white_concrete", "light_blue_concrete", "lime_concrete", "yellow_concrete", "pink_concrete"] }, fog: "coherence:cartoon_fog" }],
+  [58, { name: "Pocket Nether", replacements: [["grass_block", "netherrack"], ["dirt", "netherrack"], ["water", "lava"]], mobPolicy: "nether", fog: "coherence:nether_fog" }],
+  [59, { name: "World border void", voidChunks: BORDER_VOIDS }],
+  [60, { name: "Diamond dream", scan: { type: "solidify", block: "diamond_block" }, fog: "coherence:blue_fog" }],
+  [61, { name: "Block randomizer", scan: { type: "palette", palette: RANDOM_BLOCK_PALETTE } }],
+  [62, { name: "Hell", replacements: [["grass_block", "netherrack"], ["dirt", "soul_soil"], ["water", "lava"], ["sand", "magma"]], feature: "hellscape", mobPolicy: "nether", fog: "coherence:hell_fog" }],
+  [63, { name: "Cursed", scan: { type: "palette", palette: ["furnace", "cake", "web", "soul_sand", "crying_obsidian", "bone_block"] }, feature: "cursed", distortedSound: true, fog: "coherence:horror_fog" }],
+  [64, { name: "Stack drops", fullStackDrops: true }],
+  [65, { name: "Treasure islands", feature: "floating_islands", fog: "coherence:sky_fog" }],
+  [66, { name: "Husk desert", replacements: swap("grass_block", "sand"), mobPolicy: "husks" }],
+  [67, { name: "Seven is plenty", inventoryLimit: 7 }],
+  [68, { name: "Dinnerbone world", mobPolicy: "dinnerbone" }],
+  [69, { name: "Planetarium", scan: { type: "clear" }, feature: "planets", fog: "coherence:space_fog", arrival: { x: 0, y: 160, z: 0 } }],
+  [70, { name: "Everything random", scan: { type: "palette", palette: [...RANDOM_BLOCK_PALETTE, ...WOOL_PALETTE, ...LIGHT_PALETTE] } }],
+  [71, { name: "Absolute silence", muteSound: true }],
+  [72, { name: "Water matter", scan: { type: "solidify", block: "water" } }],
+  [73, { name: "Negative world", replacements: INVERTED_BLOCKS, fog: "coherence:contrast_fog" }],
+  [74, { name: "Bounce house", scan: { type: "palette", palette: ["slime", "honey_block", "sponge", "pink_wool", "lime_wool"] }, feature: "party", playerEffect: "bounce" }],
+  [75, { name: "Pride dimension", scan: { type: "stripes", palette: PRIDE_PALETTE }, feature: "pride", fog: "coherence:pride_fog" }],
+  [76, { name: "Yellow", scan: { type: "palette", palette: ["yellow_wool", "yellow_concrete", "gold_block", "honeycomb_block", "sponge", "ochre_froglight"] }, fog: "coherence:yellow_fog" }],
+  [77, { name: "The nightmare", replacements: [["grass_block", "sculk"], ["dirt", "soul_sand"], ["water", "black_concrete"]], feature: "horror", mobPolicy: "nightmare", distortedSound: true, fog: "coherence:horror_fog" }],
+  [78, { name: "Cruel sun", sunBurn: true, fog: "coherence:bleached_fog" }],
+  [79, { name: "Wind skeletons", mobPolicy: "skeleton_wind" }],
+  [80, { name: "Freaky Friday", mobPolicy: "freaky" }],
+  [81, { name: "Chunk pillars", scan: { type: "chunk_pillars" } }],
+  [82, { name: "Vertical echoes", feature: "vertical_clones" }],
+  [83, { name: "Living light", scan: { type: "palette", palette: LIGHT_PALETTE }, fog: "coherence:light_fog" }],
+  [84, { name: "Low gravity", playerEffect: "low_gravity", fog: "coherence:sky_fog" }],
+  [85, { name: "Emerald fever", scan: { type: "solidify", block: "emerald_block" }, playerEffect: "speed" }],
+  [86, { name: "Giant chessboard", scan: { type: "chunk_checker", palette: ["quartz_block", "black_concrete"] } }],
+  [87, { name: "Redstone pulse", scan: { type: "palette", palette: ["redstone_block", "redstone_lamp", "observer", "target"] }, fog: "coherence:crimson_fog" }],
+  [88, { name: "Target practice", scan: { type: "palette", palette: ["target", "hay_block"] }, mobPolicy: "skeleton_wind" }],
+  [89, { name: "Slime gravity", scan: { type: "solidify", block: "slime" }, playerEffect: "bounce" }],
+  [90, { name: "Invisible architecture", replacements: [["stone", "glass"], ["dirt", "glass"], ["grass_block", "glass"], ["oak_planks", "glass"]], fog: "coherence:white_fog" }],
+  [91, { name: "Drowned sponge", scan: { type: "palette", palette: ["wet_sponge", "prismarine", "water"] }, fog: "coherence:blue_fog" }],
+  [92, { name: "Coral sky", scan: { type: "clear" }, feature: "coral_sky", fog: "coherence:pride_fog", arrival: { x: 0, y: 158, z: 0 } }],
+  [93, { name: "Red glass fever", scan: { type: "palette", palette: ["red_stained_glass", "redstone_block", "red_wool"] }, fog: "coherence:crimson_fog" }],
+  [94, { name: "Door maze", feature: "door_maze" }],
+  [95, { name: "Wall maze", feature: "wall_maze", fog: "coherence:black_fog" }],
+  [96, { name: "End rod forest", scan: { type: "palette", palette: ["end_rod", "purpur_block", "end_stone"] }, fog: "coherence:end_fog" }],
+  [97, { name: "Last islands", scan: { type: "clear" }, feature: "floating_islands", fog: "coherence:space_fog", arrival: { x: 0, y: 158, z: 0 } }],
+  [98, { name: "Bee planet", scan: { type: "palette", palette: ["honey_block", "honeycomb_block", "bee_nest", "yellow_wool"] }, mobPolicy: "bees", fog: "coherence:yellow_fog" }],
+  [99, { name: "Chest labyrinth", feature: "chest_maze" }],
+  [100, { name: "Final blackout", scan: { type: "solidify", block: "blackstone" }, fog: "coherence:black_fog", mobPolicy: "nightmare", distortedSound: true }]
 ]);
 
 export function getRealityRecipe(reality) {

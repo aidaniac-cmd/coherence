@@ -58,7 +58,7 @@ export function switchReality(player, radius) {
 
   player.teleport({
     x: nextCenter.x + safeArrival.x,
-    y: player.location.y,
+    y: safeArrival.y ?? player.location.y,
     z: nextCenter.z + safeArrival.z
   });
   exitReality(player, getPlayerReality(player));
