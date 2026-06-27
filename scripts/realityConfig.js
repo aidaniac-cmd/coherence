@@ -1,7 +1,7 @@
 export const AREA_SIZE = 128;
 export const AREA_RADIUS = AREA_SIZE / 2;
-export const MIN_Y = 40;
-export const MAX_Y = 100;
+export const MIN_Y = 45;
+export const MAX_Y = 128;
 
 export const MAX_REALITY = 100;
 export const REALITY_GRID_COLUMNS = 10;

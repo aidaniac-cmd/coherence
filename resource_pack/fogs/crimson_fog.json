@@ -1,0 +1,1 @@
+{"format_version":"1.16.100","minecraft:fog_settings":{"description":{"identifier":"coherence:crimson_fog"},"distance":{"air":{"fog_start":0.1,"fog_end":0.75,"fog_color":"#7A1726","render_distance_type":"render"}}}}

@@ -1,11 +1,13 @@
 import { world } from "@minecraft/server";
 import { isInFog, applyFogEffects } from "./fog.js";
-import { getLocalLocation, getNextPlayerReality, switchReality } from "./teleport.js";
+import { getLocalLocation, getNextPlayerReality, getPlayerReality, switchReality } from "./teleport.js";
 import { isRealityReady } from "./cloneManager.js";
 import { AREA_RADIUS } from "./realityConfig.js";
+import { tickRealityEffects } from "./realityAdapter.js";
 
 export function updatePlayers() {
   for (const player of world.getPlayers()) {
+    tickRealityEffects(player, getPlayerReality(player));
     const localLoc = getLocalLocation(player);
     applyFogEffects(player, localLoc, AREA_RADIUS);
 

@@ -1,5 +1,6 @@
 import { world } from "@minecraft/server";
-import { getNextRealityId, getRealityOffset } from "./realityConfig.js";
+import { AREA_RADIUS, REALITY_COORDINATES, getNextRealityId, getRealityOffset } from "./realityConfig.js";
+import { enterReality, exitReality, getSafeArrival, resetRealityEffects } from "./realityAdapter.js";
 
 const playerReality = new Map();
 
@@ -11,6 +12,22 @@ function getRealityCenter(reality) {
 
 export function getPlayerReality(player) {
   return playerReality.get(player.name) ?? 0;
+}
+
+export function initializePlayerReality(player) {
+  const spawn = world.getDefaultSpawnLocation();
+  let detected = 0;
+  for (const [reality, offset] of REALITY_COORDINATES) {
+    const localX = player.location.x - (Math.floor(spawn.x) + offset.x);
+    const localZ = player.location.z - (Math.floor(spawn.z) + offset.z);
+    if (Math.abs(localX) <= AREA_RADIUS + 16 && Math.abs(localZ) <= AREA_RADIUS + 16) {
+      detected = reality;
+      break;
+    }
+  }
+  playerReality.set(player.name, detected);
+  resetRealityEffects(player);
+  enterReality(player, detected);
 }
 
 export function getNextPlayerReality(player) {
@@ -37,12 +54,15 @@ export function switchReality(player, radius) {
   if (localLoc.x < -radius) newLocalX = radius - 3;
   if (localLoc.z >= radius) newLocalZ = -radius + 3;
   if (localLoc.z < -radius) newLocalZ = radius - 3;
+  const safeArrival = getSafeArrival(nextReality, newLocalX, newLocalZ);
 
   player.teleport({
-    x: nextCenter.x + newLocalX,
+    x: nextCenter.x + safeArrival.x,
     y: player.location.y,
-    z: nextCenter.z + newLocalZ
+    z: nextCenter.z + safeArrival.z
   });
+  exitReality(player, getPlayerReality(player));
   playerReality.set(player.name, nextReality);
+  enterReality(player, nextReality);
   player.sendMessage(`\u00A78You entered Reality ${nextReality}`);
 }

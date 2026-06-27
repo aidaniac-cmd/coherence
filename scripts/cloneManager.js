@@ -8,6 +8,7 @@ import {
   REALITY_COORDINATES,
   getRealityOffset
 } from "./realityConfig.js";
+import { prepareRealityClone } from "./realityAdapter.js";
 
 const TILE_SIZE = 32;
 const TICKS_BETWEEN_OPERATIONS = 4;
@@ -139,15 +140,18 @@ export function setupRealityClones() {
       const placeNextTile = () => {
         if (tileIndex >= structures.length) {
           system.runTimeout(() => {
-            removeTickingArea(overworld);
-            realityCloneStates.set(reality, "ready");
+            realityCloneStates.set(reality, "adapting");
+            prepareRealityClone(reality, origin, overworld, () => {
+              removeTickingArea(overworld);
+              realityCloneStates.set(reality, "ready");
 
-            if (shouldReportProgress(reality)) {
-              world.sendMessage(`\u00A7aReality ${reality}/${MAX_REALITY} ready.`);
-            }
+              if (shouldReportProgress(reality)) {
+                world.sendMessage(`\u00A7aReality ${reality}/${MAX_REALITY} ready.`);
+              }
 
-            // No next reality starts until this one has completely finished.
-            system.runTimeout(() => cloneReality(reality + 1), TICKS_BETWEEN_OPERATIONS);
+              // No next reality starts until cloning and adaptation are complete.
+              system.runTimeout(() => cloneReality(reality + 1), TICKS_BETWEEN_OPERATIONS);
+            });
           }, REALITY_FINISH_DELAY);
           return;
         }
