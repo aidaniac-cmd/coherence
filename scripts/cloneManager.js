@@ -1,17 +1,34 @@
 import { world, system } from "@minecraft/server";
-import { AREA_RADIUS, AREA_SIZE, MAX_Y, MIN_Y, REALITY_OFFSETS } from "./realityConfig.js";
+import {
+  AREA_RADIUS,
+  AREA_SIZE,
+  MAX_REALITY,
+  MAX_Y,
+  MIN_Y,
+  REALITY_COORDINATES,
+  getRealityOffset
+} from "./realityConfig.js";
 
 const TILE_SIZE = 32;
-const TICKS_BETWEEN_TILES = 4;
-const SOURCE_LOAD_DELAY = 40;
-const FINISH_DELAY = 80;
+const TICKS_BETWEEN_OPERATIONS = 4;
+const DESTINATION_LOAD_DELAY = 40;
+const REALITY_FINISH_DELAY = 80;
 const TICKING_AREA_NAME = "coherence_clone_target";
 
+export const realityCloneStates = new Map();
+for (const reality of REALITY_COORDINATES.keys()) {
+  realityCloneStates.set(reality, reality === 0 ? "ready" : "pending");
+}
+
 let hasStartedClone = false;
-let clonesReady = false;
+let allClonesReady = false;
+
+export function isRealityReady(reality) {
+  return realityCloneStates.get(reality) === "ready";
+}
 
 export function areRealityClonesReady() {
-  return clonesReady;
+  return allClonesReady;
 }
 
 function getOrigin() {
@@ -35,19 +52,18 @@ function loadDestination(overworld, origin, offset) {
   const toZ = fromZ + AREA_SIZE - 1;
 
   try {
-    overworld.runCommand(
+    const result = overworld.runCommand(
       `tickingarea add ${fromX} ${MIN_Y} ${fromZ} ${toX} ${MAX_Y} ${toZ} ${TICKING_AREA_NAME} true`
     );
-    return true;
+    return result.successCount > 0;
   } catch {
-    // Structure placement queues unloaded chunks, so this has a safe fallback.
+    // Structure placement can queue unloaded chunks as a fallback.
     return false;
   }
 }
 
 function createTileJobs(origin) {
   const jobs = [];
-
   for (let localX = -AREA_RADIUS; localX < AREA_RADIUS; localX += TILE_SIZE) {
     for (let localZ = -AREA_RADIUS; localZ < AREA_RADIUS; localZ += TILE_SIZE) {
       jobs.push({
@@ -61,48 +77,108 @@ function createTileJobs(origin) {
       });
     }
   }
-
   return jobs;
+}
+
+function deleteStructures(structures) {
+  for (const structure of structures) {
+    try {
+      world.structureManager.delete(structure);
+    } catch {
+      // Continue cleaning up the remaining structures.
+    }
+  }
+}
+
+function shouldReportProgress(reality) {
+  return reality === 1 || reality === MAX_REALITY || reality % 10 === 0;
 }
 
 export function setupRealityClones() {
   if (hasStartedClone) return;
   hasStartedClone = true;
-  clonesReady = false;
+  allClonesReady = false;
 
   system.runTimeout(() => {
     const overworld = world.getDimension("overworld");
     const origin = getOrigin();
-    const destinations = REALITY_OFFSETS.slice(1);
     const jobs = createTileJobs(origin);
-    const savedStructures = [];
-    let jobIndex = 0;
+    const structures = [];
+    let captureIndex = 0;
+    let allDestinationsPreloaded = true;
 
-    world.sendMessage("§7Preparing reality copy...");
-    const destinationPreloaded = destinations.every((offset) =>
-      loadDestination(overworld, origin, offset)
-    );
+    world.sendMessage("\u00A77Capturing Reality 0...");
 
-    const copyNextTile = () => {
-      if (jobIndex >= jobs.length) {
-        system.runTimeout(() => {
-          removeTickingArea(overworld);
-          if (destinationPreloaded) {
-            for (const structure of savedStructures) {
-              try {
-                world.structureManager.delete(structure);
-              } catch {
-                // Cleanup failure should not prevent teleporting.
-              }
-            }
-          }
-          clonesReady = true;
-          world.sendMessage("§aReality copy ready.");
-        }, FINISH_DELAY);
+    const failCloneQueue = (error) => {
+      removeTickingArea(overworld);
+      deleteStructures(structures);
+      hasStartedClone = false;
+      world.sendMessage(`\u00A7cReality queue failed: ${error}`);
+    };
+
+    const finishQueue = () => {
+      removeTickingArea(overworld);
+      // Queued placements may need the templates until their chunks load.
+      if (allDestinationsPreloaded) deleteStructures(structures);
+      allClonesReady = true;
+      world.sendMessage(`\u00A7aAll ${MAX_REALITY} reality clones are ready.`);
+    };
+
+    const cloneReality = (reality) => {
+      if (reality > MAX_REALITY) {
+        finishQueue();
         return;
       }
 
-      const job = jobs[jobIndex];
+      const offset = getRealityOffset(reality);
+      const destinationPreloaded = loadDestination(overworld, origin, offset);
+      allDestinationsPreloaded = allDestinationsPreloaded && destinationPreloaded;
+      realityCloneStates.set(reality, "cloning");
+      let tileIndex = 0;
+
+      const placeNextTile = () => {
+        if (tileIndex >= structures.length) {
+          system.runTimeout(() => {
+            removeTickingArea(overworld);
+            realityCloneStates.set(reality, "ready");
+
+            if (shouldReportProgress(reality)) {
+              world.sendMessage(`\u00A7aReality ${reality}/${MAX_REALITY} ready.`);
+            }
+
+            // No next reality starts until this one has completely finished.
+            system.runTimeout(() => cloneReality(reality + 1), TICKS_BETWEEN_OPERATIONS);
+          }, REALITY_FINISH_DELAY);
+          return;
+        }
+
+        try {
+          const job = jobs[tileIndex];
+          world.structureManager.place(
+            structures[tileIndex],
+            overworld,
+            { x: job.from.x + offset.x, y: MIN_Y, z: job.from.z + offset.z },
+            { includeBlocks: true, includeEntities: false }
+          );
+          tileIndex++;
+          system.runTimeout(placeNextTile, TICKS_BETWEEN_OPERATIONS);
+        } catch (error) {
+          realityCloneStates.set(reality, "failed");
+          failCloneQueue(error);
+        }
+      };
+
+      system.runTimeout(placeNextTile, DESTINATION_LOAD_DELAY);
+    };
+
+    const captureNextTile = () => {
+      if (captureIndex >= jobs.length) {
+        world.sendMessage(`\u00A77Reality 0 captured in ${structures.length} tiles.`);
+        cloneReality(1);
+        return;
+      }
+
+      const job = jobs[captureIndex];
       try {
         const structure = world.structureManager.createFromWorld(
           job.id,
@@ -111,33 +187,14 @@ export function setupRealityClones() {
           job.to,
           { includeBlocks: true, includeEntities: false }
         );
-        savedStructures.push(structure);
-
-        for (const offset of destinations) {
-          world.structureManager.place(
-            structure,
-            overworld,
-            { x: job.from.x + offset.x, y: MIN_Y, z: job.from.z + offset.z },
-            { includeBlocks: true, includeEntities: false }
-          );
-        }
-
-        jobIndex++;
-        system.runTimeout(copyNextTile, TICKS_BETWEEN_TILES);
+        structures.push(structure);
+        captureIndex++;
+        system.runTimeout(captureNextTile, TICKS_BETWEEN_OPERATIONS);
       } catch (error) {
-        removeTickingArea(overworld);
-        for (const structure of savedStructures) {
-          try {
-            world.structureManager.delete(structure);
-          } catch {
-            // Continue cleanup after a partially completed copy.
-          }
-        }
-        hasStartedClone = false;
-        world.sendMessage(`§cReality copy failed: ${error}`);
+        failCloneQueue(error);
       }
     };
 
-    system.runTimeout(copyNextTile, SOURCE_LOAD_DELAY);
+    system.runTimeout(captureNextTile, DESTINATION_LOAD_DELAY);
   }, 20);
 }

@@ -1,16 +1,20 @@
 import { world } from "@minecraft/server";
-import { REALITY_OFFSETS } from "./realityConfig.js";
+import { getNextRealityId, getRealityOffset } from "./realityConfig.js";
 
 const playerReality = new Map();
 
 function getRealityCenter(reality) {
   const spawn = world.getDefaultSpawnLocation();
-  const offset = REALITY_OFFSETS[reality];
+  const offset = getRealityOffset(reality);
   return { x: Math.floor(spawn.x) + offset.x, z: Math.floor(spawn.z) + offset.z };
 }
 
 export function getPlayerReality(player) {
   return playerReality.get(player.name) ?? 0;
+}
+
+export function getNextPlayerReality(player) {
+  return getNextRealityId(getPlayerReality(player));
 }
 
 export function getLocalLocation(player) {
@@ -23,8 +27,7 @@ export function getLocalLocation(player) {
 }
 
 export function switchReality(player, radius) {
-  const currentReality = getPlayerReality(player);
-  const nextReality = currentReality === 0 ? 1 : 0;
+  const nextReality = getNextPlayerReality(player);
   const nextCenter = getRealityCenter(nextReality);
   const localLoc = getLocalLocation(player);
   let newLocalX = localLoc.x;
@@ -41,5 +44,5 @@ export function switchReality(player, radius) {
     z: nextCenter.z + newLocalZ
   });
   playerReality.set(player.name, nextReality);
-  player.sendMessage(`§8You entered Reality ${nextReality}`);
+  player.sendMessage(`\u00A78You entered Reality ${nextReality}`);
 }
