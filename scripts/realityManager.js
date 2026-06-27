@@ -1,17 +1,16 @@
 import { world } from "@minecraft/server";
 import { isInFog, applyFogEffects } from "./fog.js";
-import { switchReality } from "./teleport.js";
-
-const PLAY_AREA_RADIUS = 64;
+import { switchReality, getLocalLocation } from "./teleport.js";
+import { areRealityClonesReady } from "./cloneManager.js";
+import { AREA_RADIUS } from "./realityConfig.js";
 
 export function updatePlayers() {
   for (const player of world.getPlayers()) {
-    const loc = player.location;
+    const localLoc = getLocalLocation(player);
+    applyFogEffects(player, localLoc, AREA_RADIUS);
 
-    applyFogEffects(player, loc, PLAY_AREA_RADIUS);
-
-    if (isInFog(loc, PLAY_AREA_RADIUS)) {
-      switchReality(player, PLAY_AREA_RADIUS);
+    if (areRealityClonesReady() && isInFog(localLoc, AREA_RADIUS)) {
+      switchReality(player, AREA_RADIUS);
     }
   }
 }
